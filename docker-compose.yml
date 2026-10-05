@@ -1,0 +1,17 @@
+services:
+  signl-server:
+    build: .
+    container_name: signl-server
+    restart: unless-stopped
+    ports:
+      - "8484:8484"
+    volumes:
+      # Hier landen die Filme. Statt des Volumes geht auch ein Ordner,
+      # z. B. /mnt/medien/signl:/data
+      - signl-data:/data
+    environment:
+      SIGNL_NAME: "Mein SIGNL-Server"
+      # SIGNL_TOKEN: "eigener-schluessel"   # sonst wird einer erzeugt (siehe Log)
+      # SIGNL_PARALLEL: "2"                  # gleichzeitige Downloads
+volumes:
+  signl-data:

@@ -1,0 +1,15 @@
+# Für alle, die das fertige Image nutzen wollen (nach der Veröffentlichung):
+#   docker compose -f docker-compose.image.yml up -d
+# Das Image liegt öffentlich auf GitHub (ghcr.io/raceghg/signl-server).
+services:
+  signl-server:
+    image: ghcr.io/raceghg/signl-server:latest
+    container_name: signl-server
+    restart: unless-stopped
+    ports:
+      - "8484:8484"
+    environment:
+      SIGNL_NAME: "Mein SIGNL-Server"
+      # SIGNL_TOKEN: "eigener-schluessel-mit-mindestens-16-zeichen"
+    volumes:
+      - ./daten:/data

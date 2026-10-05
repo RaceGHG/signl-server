@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIGNL Download-Server</title>
+<style>
+  :root { color-scheme: dark light; --bg:#0d0f14; --fg:#f2f4f8; --mut:#8b93a3; --card:#171a22; --acc:#3d8bff; --ok:#34c759; --bad:#ff5a52; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f4f5f8; --fg:#14171f; --mut:#667085; --card:#fff; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--mut); margin-bottom: 22px; }
+  .card { background: var(--card); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+  .row { display:flex; gap:12px; align-items:center; justify-content:space-between; }
+  .t { font-weight: 600; overflow-wrap:anywhere; }
+  .m { color: var(--mut); font-size: 13px; }
+  .bar { height: 5px; background: rgba(128,128,128,.25); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+  .bar > i { display:block; height:100%; background: var(--acc); }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  button { font: inherit; border: 0; border-radius: 9px; padding: 7px 12px; background: rgba(128,128,128,.2); color: var(--fg); cursor: pointer; }
+  button.p { background: var(--acc); color: #fff; }
+  input { font: inherit; padding: 9px 11px; border-radius: 9px; border: 1px solid rgba(128,128,128,.4); background: transparent; color: var(--fg); width: 100%; }
+  a { color: var(--acc); }
+  .empty { text-align:center; color: var(--mut); padding: 30px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="name">SIGNL Download-Server</h1>
+  <div class="sub" id="info">Mit Zugangsschlüssel anmelden.</div>
+  <div id="login" class="card" hidden>
+    <p class="m" style="margin-top:0">Den Zugangsschlüssel zeigt der Server beim Start an (oder <code>signl-server -show-token</code>).</p>
+    <div class="row"><input id="tok" type="password" placeholder="Zugangsschlüssel" autocomplete="off"><button class="p" id="go">Anmelden</button></div>
+  </div>
+  <div id="list"></div>
+</main>
+<script>
+let token = localStorage.getItem('signl-token') || '';
+const $ = id => document.getElementById(id);
+const fmt = b => b > 1e9 ? (b/1e9).toFixed(1)+' GB' : b > 1e6 ? (b/1e6).toFixed(0)+' MB' : (b/1e3).toFixed(0)+' KB';
+async function call(path, opt={}) {
+  const r = await fetch(path, {...opt, headers:{...(opt.headers||{}), Authorization:'Bearer '+token}});
+  if (r.status === 401) { $('login').hidden = false; throw new Error('401'); }
+  return r.json();
+}
+function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function refresh() {
+  try {
+    const info = await call('/api/v1/info');
+    $('login').hidden = true;
+    $('name').textContent = info.name;
+    $('info').textContent = 'Version ' + info.version + ' · ' + fmt(info.freeBytes) + ' frei' + (info.ffmpeg ? ' · ffmpeg vorhanden' : '');
+    const {downloads} = await call('/api/v1/downloads');
+    $('list').innerHTML = downloads.length ? downloads.map(d => {
+      const state = {queued:'Wartet', downloading:'Lädt '+Math.round(d.progress*100)+' %', completed:'Fertig', failed:'Fehlgeschlagen', cancelled:'Abgebrochen'}[d.state] || d.state;
+      const cls = d.state === 'completed' ? 'ok' : d.state === 'failed' ? 'bad' : '';
+      return `<div class="card"><div class="row"><div><div class="t">${esc(d.title)}</div>
+        <div class="m"><span class="${cls}">${state}</span>${d.subtitle ? ' · '+esc(d.subtitle) : ''}${d.total ? ' · '+fmt(d.total) : ''}${d.error ? ' · '+esc(d.error) : ''}</div></div>
+        <div>${d.state === 'completed' ? `<a href="/api/v1/files/${encodeURIComponent(d.id)}?token=${encodeURIComponent(token)}">Laden</a> ` : ''}
+        <button data-del="${esc(d.id)}">Entfernen</button></div></div>
+        ${d.state === 'downloading' ? `<div class="bar"><i style="width:${Math.round(d.progress*100)}%"></i></div>` : ''}</div>`;
+    }).join('') : '<div class="empty">Noch keine Downloads. Starte einen in der SIGNL-App.</div>';
+  } catch (e) {}
+}
+$('go').onclick = () => { token = $('tok').value.trim(); localStorage.setItem('signl-token', token); refresh(); };
+$('list').onclick = async e => { const id = e.target.dataset.del; if (id && confirm('Download und Datei vom Server löschen?')) { await call('/api/v1/downloads/'+encodeURIComponent(id), {method:'DELETE'}); refresh(); } };
+refresh(); setInterval(refresh, 3000);
+</script>
+</body>
+</html>

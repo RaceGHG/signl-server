@@ -1,0 +1,20 @@
+# Installation:
+#   sudo cp signl-server /usr/local/bin/ && sudo chmod +x /usr/local/bin/signl-server
+#   sudo useradd -r -m -d /var/lib/signl-server signl
+#   sudo cp signl-server.service /etc/systemd/system/
+#   sudo systemctl enable --now signl-server
+#   sudo journalctl -u signl-server   # zeigt Adresse und Zugangsschlüssel
+[Unit]
+Description=SIGNL Download-Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=signl
+Environment=SIGNL_DATA=/var/lib/signl-server
+ExecStart=/usr/local/bin/signl-server
+Restart=on-failure
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
