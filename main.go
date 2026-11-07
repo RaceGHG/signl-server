@@ -17,11 +17,12 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
 // Version wird beim Bauen gesetzt (-ldflags "-X main.Version=…").
-var Version = "1.1.0"
+var Version = "1.2.0"
 
 func env(name, fallback string) string {
 	if v := os.Getenv(name); v != "" {
@@ -67,6 +68,7 @@ func main() {
 	}
 	fmt.Printf("  Schlüssel: %s\n\n", token)
 	fmt.Println("In SIGNL: Einstellungen → Download-Server → Server hinzufügen.")
+	codeZeigen(*port, token, *name)
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -79,6 +81,36 @@ func main() {
 	<-stop
 	engine.stopAll()
 	_ = srv.Close()
+}
+
+// codeZeigen gibt den Einrichtungs-Code aus (SIGNL_QR=0 schaltet ihn ab). Adresse: SIGNL_ADDRESS, sonst die Adresse im Heimnetz.
+func codeZeigen(port int, token, name string) {
+	if os.Getenv("SIGNL_QR") == "0" {
+		return
+	}
+	adresse := strings.TrimRight(strings.TrimSpace(os.Getenv("SIGNL_ADDRESS")), "/")
+	if adresse == "" {
+		if imDocker() {
+			fmt.Println("\nQR-Code zum Einrichten: Setze SIGNL_ADDRESS auf die Adresse, unter der die Apps den Server erreichen")
+			fmt.Println("(z. B. http://192.168.1.20:8484) — im Container kennt der Server nur seine interne Adresse.")
+			return
+		}
+		ip := besteAdresse(localIPs())
+		if ip == "" {
+			return
+		}
+		adresse = fmt.Sprintf("http://%s:%d", ip, port)
+	}
+	link := einrichtungsLink(adresse, token, name)
+	bild, err := qrTerminal(link)
+	if err != nil {
+		return
+	}
+	fmt.Println("\nOder in der App scannen (iPhone/iPad: Download-Server → Code scannen, Android: Download-Server → QR-Code scannen):")
+	fmt.Println()
+	fmt.Print(bild)
+	fmt.Printf("\n  %s\n\n", link)
+	fmt.Println("Der Code enthält den Zugangsschlüssel — zeig ihn nur deinen eigenen Geräten.")
 }
 
 func atoi(s string) int {

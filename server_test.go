@@ -231,3 +231,18 @@ func TestCorsNurFuerSignlWeb(t *testing.T) {
 		t.Fatalf("ohne Schlüssel: %d", r2.StatusCode)
 	}
 }
+
+// Der Einrichtungs-Code: Link mit Adresse, Schlüssel und Name; der QR-Code ist ein Quadrat aus Halbblöcken.
+func TestEinrichtungsCode(t *testing.T) {
+	link := einrichtungsLink("http://192.168.1.20:8484", "abc123", "Mein Server")
+	if link != "signl://dlserver?k=abc123&n=Mein%20Server&u=http%3A%2F%2F192.168.1.20%3A8484" {
+		t.Fatalf("Link: %s", link)
+	}
+	bild, err := qrTerminal(link)
+	if err != nil || !strings.Contains(bild, "█") {
+		t.Fatalf("QR: %v", err)
+	}
+	if besteAdresse([]string{"172.17.0.2", "10.0.0.5", "192.168.178.20"}) != "192.168.178.20" {
+		t.Fatal("Heimnetz-Adresse nicht bevorzugt")
+	}
+}

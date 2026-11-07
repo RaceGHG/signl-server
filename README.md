@@ -16,12 +16,15 @@ A small, dependency-free server that downloads movies and series to **your own s
 docker run -d --name signl-server --restart unless-stopped \
   -p 8484:8484 -v ./signl-data:/data \
   ghcr.io/raceghg/signl-server:latest
-docker logs signl-server        # shows the address and the access key
+docker logs signl-server        # shows the address, the access key and a QR code
 ```
 
 Or with Docker Compose: see [`docker-compose.image.yml`](docker-compose.image.yml).
 
-In SIGNL: **Profile → Settings → Download server → Add server**, enter the address and the key.
+In SIGNL: **Profile → Settings → Download server → Add server** → **Scan code** (iPhone, iPad,
+Android phone) and scan the QR code from the log — or enter the address and the key by hand.
+In Docker, set `SIGNL_ADDRESS` (e.g. `http://192.168.1.20:8484`), otherwise no QR code is shown.
+The QR code contains the key: don't share it.
 Then choose "On <your server>" when you download a title, or set it as the default.
 
 ## Without Docker
@@ -38,6 +41,8 @@ Download a binary for macOS, Windows or Linux from the
 | `SIGNL_NAME` | `-name` | host name | name shown in SIGNL |
 | `SIGNL_PARALLEL` | `-parallel` | 2 | simultaneous downloads |
 | `SIGNL_TOKEN` | – | generated | your own access key (≥ 16 characters) |
+| `SIGNL_ADDRESS` | – | detected LAN address | address in the QR code; needed in Docker |
+| `SIGNL_QR` | – | 1 | `0` hides the QR code |
 
 HLS streams (`.m3u8`) need `ffmpeg` (included in the Docker image).
 

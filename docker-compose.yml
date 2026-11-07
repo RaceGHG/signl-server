@@ -11,6 +11,8 @@ services:
       - signl-data:/data
     environment:
       SIGNL_NAME: "Mein SIGNL-Server"
+      # Adresse des NAS/Rechners im Heimnetz — dann zeigt das Log einen QR-Code zum Scannen in SIGNL:
+      # SIGNL_ADDRESS: "http://192.168.1.20:8484"
       # SIGNL_TOKEN: "eigener-schluessel"   # sonst wird einer erzeugt (siehe Log)
       # SIGNL_PARALLEL: "2"                  # gleichzeitige Downloads
 volumes:

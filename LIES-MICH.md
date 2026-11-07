@@ -24,10 +24,15 @@ Adresse:   http://192.168.1.20:8484
 Schlüssel: 3f9c…
 ```
 
+Darunter steht ein QR-Code. Er enthält Adresse und Schlüssel — zeig ihn niemandem, dem
+du den Server nicht geben willst.
+
 ## In SIGNL verbinden
 
-**Einstellungen → Download-Server → Server hinzufügen** → Adresse und Schlüssel
-eintragen. Danach lässt sich bei jedem Download wählen, wohin er geht, oder in den
+**Einstellungen → Download-Server → Server hinzufügen** → **Code scannen** (iPhone,
+iPad, Android-Handy) und den QR-Code aus dem Fenster bzw. Log scannen — oder
+Adresse und Schlüssel von Hand eintragen. Im Browser lässt sich der Link unter dem
+QR-Code ins Adressfeld einfügen. Danach lässt sich bei jedem Download wählen, wohin er geht, oder in den
 Einstellungen ein Standard festlegen („Dieses Gerät" / dein Server).
 
 ## Einstellungen (Umgebungsvariablen oder Optionen)
@@ -39,6 +44,8 @@ Einstellungen ein Standard festlegen („Dieses Gerät" / dein Server).
 | `SIGNL_NAME` | `-name` | Rechnername | Anzeigename in SIGNL |
 | `SIGNL_PARALLEL` | `-parallel` | 2 | Gleichzeitige Downloads |
 | `SIGNL_TOKEN` | – | wird erzeugt | Eigener Zugangsschlüssel (mind. 16 Zeichen) |
+| `SIGNL_ADDRESS` | – | erkannte Netzwerk-Adresse | Adresse im QR-Code, z. B. `http://192.168.1.20:8484`. **In Docker nötig**, sonst gibt es keinen QR-Code (der Container kennt die Adresse des NAS nicht) |
+| `SIGNL_QR` | – | 1 | `0` blendet den QR-Code aus |
 
 `signl-server -show-token` zeigt den Schlüssel noch einmal.
 
