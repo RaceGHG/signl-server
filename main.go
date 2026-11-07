@@ -21,7 +21,7 @@ import (
 )
 
 // Version wird beim Bauen gesetzt (-ldflags "-X main.Version=…").
-var Version = "1.0.0"
+var Version = "1.1.0"
 
 func env(name, fallback string) string {
 	if v := os.Getenv(name); v != "" {

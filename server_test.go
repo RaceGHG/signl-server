@@ -193,3 +193,41 @@ func TestUngueltigeAdresseUndPfadtricks(t *testing.T) {
 		t.Fatal("within lässt ../ durch")
 	}
 }
+
+// SIGNL Web darf den Server aus dem Browser fragen (CORS), fremde Webseiten nicht. Der Schlüssel bleibt trotzdem Pflicht.
+func TestCorsNurFuerSignlWeb(t *testing.T) {
+	srv, _, _ := testServer(t)
+	frage := func(origin string) *http.Response {
+		req, _ := http.NewRequest(http.MethodOptions, srv.URL+"/api/v1/info", nil)
+		req.Header.Set("Origin", origin)
+		req.Header.Set("Access-Control-Request-Method", "GET")
+		req.Header.Set("Access-Control-Request-Private-Network", "true")
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		return res
+	}
+	res := frage("https://app.signlplus.delta-code.de")
+	if res.StatusCode != http.StatusNoContent || res.Header.Get("Access-Control-Allow-Origin") != "https://app.signlplus.delta-code.de" || res.Header.Get("Access-Control-Allow-Private-Network") != "true" {
+		t.Fatalf("SIGNL Web abgelehnt: %d %v", res.StatusCode, res.Header)
+	}
+	if h := frage("https://boese.example").Header.Get("Access-Control-Allow-Origin"); h != "" {
+		t.Fatalf("fremde Webseite erlaubt: %q", h)
+	}
+	if h := frage("http://localhost:5173").Header.Get("Access-Control-Allow-Origin"); h != "http://localhost:5173" {
+		t.Fatalf("localhost abgelehnt: %q", h)
+	}
+	// Ohne Schlüssel weiterhin kein Zugriff, auch von SIGNL Web aus.
+	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/info", nil)
+	req.Header.Set("Origin", "https://app.signlplus.delta-code.de")
+	r2, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r2.Body.Close()
+	if r2.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("ohne Schlüssel: %d", r2.StatusCode)
+	}
+}

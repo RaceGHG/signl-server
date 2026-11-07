@@ -34,7 +34,54 @@ func newAPI(s *store, e *engine, token, name, data string) http.Handler {
 	a.mux.HandleFunc("POST /api/v1/downloads/{id}/retry", a.auth(a.retry))
 	a.mux.HandleFunc("DELETE /api/v1/downloads/{id}", a.auth(a.remove))
 	a.mux.HandleFunc("GET /api/v1/files/{id}", a.auth(a.file))
-	return a.mux
+	return cors(a.mux)
+}
+
+// Webadressen, die den Server aus dem Browser ansprechen dürfen (SIGNL Web). Zusätzlich localhost zum Entwickeln
+// und was in SIGNL_ORIGINS steht (durch Kommas getrennt, z. B. eine eigene Adresse der Web-App).
+var erlaubteHerkunft = []string{"https://app.signlplus.delta-code.de"}
+
+func herkunftErlaubt(o string) bool {
+	if o == "" {
+		return false
+	}
+	for _, e := range erlaubteHerkunft {
+		if o == e {
+			return true
+		}
+	}
+	for _, e := range strings.Split(os.Getenv("SIGNL_ORIGINS"), ",") {
+		if e = strings.TrimSpace(e); e != "" && o == e {
+			return true
+		}
+	}
+	u, err := url.Parse(o)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1")
+}
+
+// cors erlaubt SIGNL Web den Zugriff aus dem Browser. Der Zugangsschlüssel bleibt Pflicht — CORS sagt nur, welche Webseite fragen darf.
+// Chrome fragt bei Adressen im Heimnetz zusätzlich nach (Private Network Access); auch das wird nur für erlaubte Herkunft bejaht.
+func cors(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		o := r.Header.Get("Origin")
+		if herkunftErlaubt(o) {
+			h := w.Header()
+			h.Set("Access-Control-Allow-Origin", o)
+			h.Add("Vary", "Origin")
+			h.Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+			h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+			h.Set("Access-Control-Expose-Headers", "Content-Length, Content-Range")
+			h.Set("Access-Control-Max-Age", "600")
+			if r.Header.Get("Access-Control-Request-Private-Network") == "true" {
+				h.Set("Access-Control-Allow-Private-Network", "true")
+			}
+		}
+		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // auth prüft den Zugangsschlüssel: Kopfzeile `Authorization: Bearer …` oder,
